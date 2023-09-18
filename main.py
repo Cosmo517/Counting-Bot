@@ -54,28 +54,42 @@ must_restart = False
 @bot.event
 async def on_message(message):
     global must_restart
+    # do not react to the bots output
     if message.author.name == bot.user.name:
         return
 
+    # get the counting channel
+    counting_channel = discord.utils.get(message.guild.channels, name='counting-restarts')
+
+    # only get input from counting_channel
+    if message.channel != counting_channel:
+        return
+
+    # remove a message if it contains words/not base 10
     try:
         int(message.content)
     except:
         await message.delete()
+        await counting_channel.send("Restart! only base 10 numbers are allowed.")
         return
 
-    counting_channel = discord.utils.get(message.guild.channels, name='counting-restarts')
+
+
+    # get the previous two messages
     messages = [message async for message in counting_channel.history(limit=2)]
-    if int(messages[1].content) == (int(messages[0].content) + 1) and must_restart is not False:
-        return
-    elif must_restart:
-        print(f'must_restart: {must_restart}, message: {message}')
-        await message.delete()
-        await counting_channel.send("You must start at 1!")
-    else:
-        print(f'must_restart: {must_restart}, message: {message}')
-        await message.delete()
-        must_restart = True
-        await counting_channel.send("Restart!")
 
+    # check if messages[1] is the bots name
+    # this means messages[0] should be 1
+    if messages[1].author.name == bot.user.name:
+        if int(messages[0].content) == 1:
+            return
+        else:
+            await message.delete()
+            await counting_channel.send("You must start at 1!")
+    else:
+        if int(messages[0].content) == int(messages[1].content) + 1:
+            return
+        else:
+            await counting_channel.send("You must start at 1!")
 
 bot.run(TOKEN)
